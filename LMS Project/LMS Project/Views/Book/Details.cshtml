@@ -1,0 +1,68 @@
+@model LMS_Project.Models.Book
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang Chủ</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Book" asp-action="Index">Sách</a></li>
+        <li class="breadcrumb-item active">@Model.Title</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <img src="@(Model.CoverImagePath ?? "/images/no-cover.svg")"
+             class="img-fluid rounded shadow" alt="@Model.Title"
+             onerror="this.src='/images/no-cover.svg'" style="max-height:400px; object-fit:cover; width:100%;" />
+    </div>
+    <div class="col-md-8">
+        <span class="badge bg-info text-dark mb-2">@Model.Category?.Name</span>
+        <h2 class="fw-bold">@Model.Title</h2>
+        <p class="text-muted"><i class="bi bi-person me-1"></i><strong>Tác giả:</strong> @Model.Author</p>
+        @if (Model.ISBN != null)
+        {
+            <p class="text-muted"><i class="bi bi-upc me-1"></i><strong>ISBN:</strong> @Model.ISBN</p>
+        }
+        <p><strong>Tổng số:</strong> @Model.Quantity</p>
+        <p>
+            <strong>Còn lại:</strong>
+            <span class="badge @(Model.AvailableQuantity > 0 ? "bg-success" : "bg-danger") fs-6">
+                @Model.AvailableQuantity / @Model.Quantity
+            </span>
+        </p>
+        @if (Model.Description != null)
+        {
+            <hr />
+            <h5>Mô Tả</h5>
+            <p class="text-muted">@Model.Description</p>
+        }
+        <hr />
+        <div class="d-flex gap-2 flex-wrap">
+            @if (!User.IsInRole("Admin") && Model.AvailableQuantity > 0)
+            {
+                <form asp-controller="Borrow" asp-action="Borrow" method="post" id="borrowForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="bookId" value="@Model.Id" />
+                    <button type="submit" class="btn btn-primary" id="borrowBtn">
+                        <i class="bi bi-bookmark-plus me-1"></i>Mượn Sách Này
+                    </button>
+                </form>
+            }
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i>Chỉnh Sửa
+                </a>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post"
+                      onsubmit="return confirm('Bạn có chắc muốn xóa sách này?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Xóa
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>
