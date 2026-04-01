@@ -1,26 +1,26 @@
-# 📚 Hệ Thống Quản Lý Thư Viện (LMS)
+# Hệ Thống Quản Lý Thư Viện (LMS)
 
 Hệ thống quản lý thư viện trực tuyến được xây dựng bằng ASP.NET Core 8 MVC và MySQL.
 
-## ✨ Tính năng
+## Tính năng
 
 ### Dành cho User
-- 🔍 Tìm kiếm và xem danh sách sách
-- 📖 Xem chi tiết thông tin sách
-- 📝 Gửi yêu cầu mượn sách
-- 📜 Xem lịch sử mượn sách
-- ↩️ Tự trả sách đã mượn
-- 👤 Đăng ký/Đăng nhập tài khoản
+- Tìm kiếm và xem danh sách sách
+- Xem chi tiết thông tin sách
+- Gửi yêu cầu mượn sách
+- Xem lịch sử mượn sách
+- Tự trả sách đã mượn
+- Đăng ký/Đăng nhập tài khoản
 
 ### Dành cho Admin
-- 📊 Dashboard tổng quan hệ thống
-- 📚 Quản lý sách (thêm/sửa/xóa)
-- 👥 Quản lý người dùng
-- 📋 Quản lý danh mục
-- ✅ Duyệt/từ chối yêu cầu mượn sách
-- 📥 Quản lý trả sách và theo dõi quá hạn
+- Dashboard tổng quan hệ thống
+- Quản lý sách (thêm/sửa/xóa)
+- Quản lý người dùng
+- Quản lý danh mục
+- Duyệt/từ chối yêu cầu mượn sách
+- Quản lý trả sách và theo dõi quá hạn
 
-## 🛠️ Công nghệ sử dụng
+## Công nghệ sử dụng
 
 - **Backend**: ASP.NET Core 8.0 MVC
 - **Database**: MySQL 8.0
@@ -29,13 +29,13 @@ Hệ thống quản lý thư viện trực tuyến được xây dựng bằng A
 - **Frontend**: Bootstrap 5, Bootstrap Icons
 - **Template Engine**: Razor Pages
 
-## 📋 Yêu cầu hệ thống
+## Yêu cầu hệ thống
 
 - .NET 8 SDK
 - XAMPP (hoặc MySQL Server)
 - Git
 
-## 🚀 Cài đặt và chạy
+## Cài đặt và chạy
 
 ### 1. Clone repository
 
@@ -79,14 +79,14 @@ Project sẽ tự động:
 
 Mở trình duyệt: `https://localhost:5055` hoặc `http://localhost:5055`
 
-## 🔐 Tài khoản mặc định
+## Tài khoản mặc định
 
 | Vai trò | Email | Mật khẩu |
 |---------|-------|----------|
 | **Admin** | admin@lms.com | Admin@123 |
 | **User** | _Đăng ký mới_ | - |
 
-## 📁 Cấu trúc project
+## Cấu trúc project
 
 ```
 LMS Project/
@@ -116,7 +116,7 @@ LMS Project/
 └── Program.cs          # Application entry point
 ```
 
-## 🎯 Quy trình sử dụng
+## Quy trình sử dụng
 
 ### User
 1. Đăng ký tài khoản → Đăng nhập
@@ -133,7 +133,7 @@ LMS Project/
    - Theo dõi quá hạn
 4. Quản lý sách/danh mục/người dùng
 
-## 📝 Ghi chú
+## Ghi chú
 
 - Mỗi user chỉ được mượn tối đa **3 cuốn** cùng lúc
 - Thời hạn mượn: **14 ngày**
@@ -141,7 +141,7 @@ LMS Project/
 - User role **không được phép** truy cập trang Admin
 - Admin role **không thể** mượn sách (chỉ quản lý)
 
-## 📞 Liên hệ
+## Liên hệ
 
 GitHub: [Danh25204](https://github.com/Danh25204)
 
