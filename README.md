@@ -79,6 +79,51 @@ Project sẽ tự động:
 
 Mở trình duyệt: `https://localhost:5055` hoặc `http://localhost:5055`
 
+## Database Setup (Tùy chọn)
+
+### Phương án A: Tự động (Khuyến nghị)
+
+EF Core Migrations sẽ tự động tạo database khi chạy `dotnet run` lần đầu.
+
+Chỉ cần tạo database rỗng:
+```sql
+CREATE DATABASE lms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+Sau đó chạy project, EF sẽ tự động:
+- Tạo tất cả bảng
+- Seed 1 admin (`admin@lms.com / Admin@123`)
+- Seed 5 danh mục
+- Seed 50 sách mẫu
+
+### Phương án B: Import SQL thủ công
+
+Nếu muốn import database trực tiếp qua phpMyAdmin hoặc MySQL CLI:
+
+**1. Tạo schema + seed data cơ bản:**
+```bash
+mysql -u root -p < database_schema.sql
+```
+
+**2. Import dữ liệu sách (50 cuốn):**
+```bash
+mysql -u root -p < seed_books.sql
+```
+
+Hoặc dùng phpMyAdmin: Import → Chọn file → Go
+
+**Các file SQL có sẵn:**
+- `database_schema.sql` - Tạo bảng, categories, admin
+- `seed_books.sql` - Thêm 50 sách mẫu
+
+### Phương án C: Export toàn bộ database
+
+Nếu bạn đã có database hoàn chỉnh và muốn chia sẻ:
+
+1. phpMyAdmin → Chọn `lms_db` → Tab **Export**
+2. Method: **Quick** → Format: **SQL** → **Go**
+3. Chia sẻ file `.sql` cho người khác import
+
 ## Tài khoản mặc định
 
 | Vai trò | Email | Mật khẩu |
