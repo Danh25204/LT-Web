@@ -5,20 +5,28 @@ Hệ thống quản lý thư viện trực tuyến được xây dựng bằng A
 ## Tính năng
 
 ### Dành cho User
-- Tìm kiếm và xem danh sách sách
+- Tìm kiếm và xem danh sách sách (realtime search)
 - Xem chi tiết thông tin sách
-- Gửi yêu cầu mượn sách
-- Xem lịch sử mượn sách
+- Gửi yêu cầu mượn sách (tối đa 3 cuốn cùng lúc)
+- Hủy yêu cầu mượn đang chờ duyệt
+- Xem lịch sử mượn sách với trạng thái chi tiết
 - Tự trả sách đã mượn
-- Đăng ký/Đăng nhập tài khoản
+- Cảnh báo sách quá hạn (số ngày quá hạn)
+- Toàn bộ tính năng yêu cầu đăng nhập
 
 ### Dành cho Admin
-- Dashboard tổng quan hệ thống
-- Quản lý sách (thêm/sửa/xóa)
-- Quản lý người dùng
-- Quản lý danh mục
-- Duyệt/từ chối yêu cầu mượn sách
-- Quản lý trả sách và theo dõi quá hạn
+- Dashboard tổng quan với biểu đồ thống kê (Chart.js)
+- Danh sách việc cần xử lý (quá hạn + chờ duyệt)
+- Quản lý sách: thêm/sửa/xóa, phân trang
+  - Lọc sách theo tác giả với autocomplete
+  - Lọc sách theo danh mục với autocomplete
+- Quản lý danh mục với số sách mỗi danh mục
+- Quản lý mượn sách:
+  - Lọc theo trạng thái (Tất Cả / Chờ Duyệt / Đang Mượn / Quá Hạn / Đã Trả / Từ Chối)
+  - Highlight đỏ các sách quá hạn, hiển thị số ngày quá hạn
+  - Duyệt / Từ chối / Xác nhận trả sách
+- Quản lý người dùng: tìm kiếm realtime, xem lịch sử mượn
+- DueDate được tính từ ngày **duyệt** (không phải ngày gửi yêu cầu)
 
 ## Công nghệ sử dụng
 
