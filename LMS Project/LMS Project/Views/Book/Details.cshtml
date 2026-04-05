@@ -40,7 +40,7 @@
         }
         <hr />
         <div class="d-flex gap-2 flex-wrap">
-            @if (!User.IsInRole("Admin") && Model.AvailableQuantity > 0)
+            @if (User.Identity != null && User.Identity.IsAuthenticated && !User.IsInRole("Admin") && Model.AvailableQuantity > 0)
             {
                 <form asp-controller="Borrow" asp-action="Borrow" method="post" id="borrowForm">
                     @Html.AntiForgeryToken()

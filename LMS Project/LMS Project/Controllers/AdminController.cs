@@ -26,18 +26,41 @@ public class AdminController : Controller
 
     private const int BookPageSize = 10;
 
-    public async Task<IActionResult> Index(string tab = "dashboard", int bookPage = 1)
+    public async Task<IActionResult> Index(string tab = "dashboard", int bookPage = 1, string? authorFilter = null, string? categoryFilter = null)
     {
         ViewBag.ActiveTab = tab;
+        ViewBag.AuthorFilter = authorFilter;
+        ViewBag.CategoryFilter = categoryFilter;
 
         var allBooks = await _bookService.GetAllBooksAsync();
-        var totalBooks = allBooks.Count();
-        var totalBookPages = (int)Math.Ceiling(totalBooks / (double)BookPageSize);
-        bookPage = Math.Max(1, Math.Min(bookPage, Math.Max(1, totalBookPages)));
 
-        ViewBag.Books = allBooks.Skip((bookPage - 1) * BookPageSize).Take(BookPageSize);
-        ViewBag.BookPage = bookPage;
-        ViewBag.TotalBookPages = totalBookPages;
+        // Khi lọc theo tác giả: bỏ phân trang, hiển thị tất cả sách của tác giả đó
+        if (!string.IsNullOrWhiteSpace(authorFilter))
+        {
+            var filtered = allBooks.Where(b => b.Author == authorFilter);
+            ViewBag.Books = filtered;
+            ViewBag.BookPage = 1;
+            ViewBag.TotalBookPages = 1;
+        }
+        // Khi lọc theo danh mục: bỏ phân trang, hiển thị tất cả sách của danh mục đó
+        else if (!string.IsNullOrWhiteSpace(categoryFilter))
+        {
+            var filtered = allBooks.Where(b => b.Category != null && b.Category.Name == categoryFilter);
+            ViewBag.Books = filtered;
+            ViewBag.BookPage = 1;
+            ViewBag.TotalBookPages = 1;
+        }
+        else
+        {
+            var totalBooks2 = allBooks.Count();
+            var totalBookPages2 = (int)Math.Ceiling(totalBooks2 / (double)BookPageSize);
+            bookPage = Math.Max(1, Math.Min(bookPage, Math.Max(1, totalBookPages2)));
+            ViewBag.Books = allBooks.Skip((bookPage - 1) * BookPageSize).Take(BookPageSize);
+            ViewBag.BookPage = bookPage;
+            ViewBag.TotalBookPages = totalBookPages2;
+        }
+
+        var totalBooks = allBooks.Count();
 
         var users = await _userService.GetAllUsersAsync();
         var borrows = await _borrowService.GetAllAsync();
@@ -51,7 +74,36 @@ public class AdminController : Controller
         ViewBag.TotalBorrows = await _borrowService.GetTotalCountAsync();
         ViewBag.ActiveBorrows = await _borrowService.GetActiveCountAsync();
 
+        // Thống kê theo tác giả
+        ViewBag.AuthorStats = allBooks
+            .GroupBy(b => b.Author)
+            .OrderByDescending(g => g.Count())
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Thống kê số sách theo danh mục
+        ViewBag.CategoryBookCounts = allBooks
+            .GroupBy(b => b.CategoryId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Thống kê theo tên danh mục (dùng cho autocomplete)
+        ViewBag.CategoryStats = allBooks
+            .Where(b => b.Category != null)
+            .GroupBy(b => b.Category!.Name)
+            .OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> UserBorrowHistory(int id)
+    {
+        var user = (await _userService.GetAllUsersAsync()).FirstOrDefault(u => u.Id == id);
+        if (user == null) return NotFound();
+
+        var history = await _borrowService.GetUserHistoryAsync(id);
+        ViewBag.TargetUser = user;
+        return View(history);
     }
 
     [HttpPost]

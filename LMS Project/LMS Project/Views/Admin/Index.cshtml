@@ -6,6 +6,8 @@
     var users = ViewBag.Users as IEnumerable<User> ?? Enumerable.Empty<User>();
     var borrows = ViewBag.Borrows as IEnumerable<BorrowRecord> ?? Enumerable.Empty<BorrowRecord>();
     var categories = ViewBag.Categories as IEnumerable<Category> ?? Enumerable.Empty<Category>();
+    var categoryBookCounts = ViewBag.CategoryBookCounts as Dictionary<int, int> ?? new Dictionary<int, int>();
+    var authorStats = ViewBag.AuthorStats as Dictionary<string, int> ?? new Dictionary<string, int>();
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -117,34 +119,72 @@
         </div>
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header fw-semibold"><i class="bi bi-clock me-2"></i>Yêu Cầu Mượn Gần Đây</div>
+                <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-bell me-2"></i>Cần Xử Lý</span>
+                    <a asp-controller="Admin" asp-action="Index" asp-route-tab="borrows" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+                </div>
                 <div class="card-body table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
-                            <tr><th>Người Dùng</th><th>Sách</th><th>Ngày</th><th>Trạng Thái</th><th>Thao Tác</th></tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var b in borrows.Where(x => x.Status == BorrowStatus.Pending).Take(5))
-                            {
-                                <tr>
-                                    <td>@b.User?.FullName</td>
-                                    <td>@b.Book?.Title</td>
-                                    <td>@b.BorrowDate.ToString("dd MMM yyyy")</td>
-                                    <td><span class="badge bg-warning text-dark">Chờ Duyệt</span></td>
-                                    <td>
-                                        <form asp-controller="Borrow" asp-action="Approve" asp-route-id="@b.Id" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button class="btn btn-success btn-sm">Duyệt</button>
-                                        </form>
-                                        <form asp-controller="Borrow" asp-action="Reject" asp-route-id="@b.Id" method="post" class="d-inline">
-                                            @Html.AntiForgeryToken()
-                                            <button class="btn btn-danger btn-sm">Từ Chối</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    @{
+                        var overdueItems = borrows.Where(x => x.Status == BorrowStatus.Approved && x.DueDate < DateTime.UtcNow).ToList();
+                        var pendingItems = borrows.Where(x => x.Status == BorrowStatus.Pending).Take(5).ToList();
+                        var dashboardItems = overdueItems.Take(3).Concat(pendingItems).Take(8).ToList();
+                    }
+                    @if (!dashboardItems.Any())
+                    {
+                        <div class="text-center text-muted py-3">
+                            <i class="bi bi-check-circle text-success display-6 d-block mb-2"></i>
+                            Không có việc cần xử lý!
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light">
+                                <tr><th>Người Dùng</th><th>Sách</th><th>Ngày</th><th>Trạng Thái</th><th>Thao Tác</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var b in dashboardItems)
+                                {
+                                    var isOvd = b.Status == BorrowStatus.Approved && b.DueDate < DateTime.UtcNow;
+                                    <tr class="@(isOvd ? "table-danger" : "")">
+                                        <td>@b.User?.FullName</td>
+                                        <td>@b.Book?.Title</td>
+                                        <td>@b.BorrowDate.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            @if (isOvd)
+                                            {
+                                                <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Quá Hạn</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Chờ Duyệt</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (b.Status == BorrowStatus.Pending)
+                                            {
+                                                <form asp-controller="Borrow" asp-action="Approve" asp-route-id="@b.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-success btn-sm">Duyệt</button>
+                                                </form>
+                                                <form asp-controller="Borrow" asp-action="Reject" asp-route-id="@b.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-danger btn-sm">Từ Chối</button>
+                                                </form>
+                                            }
+                                            else if (isOvd)
+                                            {
+                                                <form asp-controller="Borrow" asp-action="Return" asp-route-id="@b.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button class="btn btn-info btn-sm text-white">Trả Sách</button>
+                                                </form>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
                 </div>
             </div>
         </div>
@@ -157,22 +197,75 @@
     int bookPage = ViewBag.BookPage;
     int totalBookPages = ViewBag.TotalBookPages;
 
-    <div class="d-flex justify-content-between mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="fw-semibold">Quản Lý Sách</h5>
         <a asp-controller="Book" asp-action="Create" class="btn btn-primary btn-sm">
             <i class="bi bi-plus-circle me-1"></i>Thêm Sách
         </a>
     </div>
+
+    <!-- Bộ lọc tác giả -->
+    <div class="card mb-3 border-0 bg-light">
+        <div class="card-body py-2 px-3">
+            <div class="row align-items-center g-2">
+                <div class="col-auto">
+                    <label for="authorSearch" class="form-label mb-0 fw-semibold">
+                        <i class="bi bi-search me-1 text-primary"></i>Tìm theo Tác Giả:
+                    </label>
+                </div>
+                <div class="col-sm-4 position-relative">
+                    <input type="text" id="authorSearch" class="form-control form-control-sm"
+                           placeholder="Nhập tên tác giả..." autocomplete="off"
+                           value="@(ViewBag.AuthorFilter as string ?? "")" />
+                    <div id="authorSuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:1000;display:none;"></div>
+                </div>
+                <div class="col-auto">
+
+                </div>
+                <div class="col-auto">
+                    @if (!string.IsNullOrEmpty(ViewBag.AuthorFilter as string))
+                    {
+                        <a asp-controller="Admin" asp-action="Index" asp-route-tab="books"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                        </a>
+                    }
+                </div>
+                <!-- Lọc theo danh mục -->
+                <div class="col-auto ms-3">
+                    <label for="categorySearch" class="form-label mb-0 fw-semibold">
+                        <i class="bi bi-tags me-1 text-success"></i>Tìm theo Danh Mục:
+                    </label>
+                </div>
+                <div class="col-sm-4 position-relative">
+                    <input type="text" id="categorySearch" class="form-control form-control-sm"
+                           placeholder="Nhập tên danh mục..." autocomplete="off"
+                           value="@(ViewBag.CategoryFilter as string ?? "")" />
+                    <div id="categorySuggestions" class="list-group position-absolute w-100 shadow-sm" style="z-index:1000;display:none;"></div>
+                </div>
+                <div class="col-auto">
+                    @if (!string.IsNullOrEmpty(ViewBag.CategoryFilter as string))
+                    {
+                        <a asp-controller="Admin" asp-action="Index" asp-route-tab="books"
+                           class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle" id="booksTable">
             <thead class="table-dark">
                 <tr><th>#</th><th>Ảnh Bìa</th><th>Tiêu Đề</th><th>Tác Giả</th><th>Danh Mục</th><th>SL</th><th>Còn</th><th>Thao Tác</th></tr>
             </thead>
-            <tbody>
+            <tbody id="booksTableBody">
                 @{int bRow = (bookPage - 1) * 10 + 1;}
                 @foreach (var book in books)
                 {
-                    <tr>
+                    <tr data-author="@book.Author">
                         <td>@(bRow++)</td>
                         <td>
                             <img src="@(book.CoverImagePath ?? "/images/no-cover.svg")"
@@ -247,16 +340,18 @@
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-dark">
-                <tr><th>#</th><th>Tên</th><th>Mô Tả</th><th>Thao Tác</th></tr>
+                <tr><th>#</th><th>Tên</th><th>Mô Tả</th><th>Số Sách</th><th>Thao Tác</th></tr>
             </thead>
             <tbody>
                 @{int cRow = 1;}
                 @foreach (var cat in categories)
                 {
+                    var bookCount = categoryBookCounts.TryGetValue(cat.Id, out int cnt) ? cnt : 0;
                     <tr>
                         <td>@(cRow++)</td>
                         <td class="fw-semibold">@cat.Name</td>
                         <td class="text-muted">@(cat.Description ?? "-")</td>
+                        <td><span class="badge bg-info text-dark">@bookCount quyển</span></td>
                         <td>
                             <a asp-controller="Category" asp-action="Edit" asp-route-id="@cat.Id" class="btn btn-warning btn-sm">
                                 <i class="bi bi-pencil"></i>
@@ -277,27 +372,72 @@
 <!-- Borrows Tab -->
 @if (activeTab == "borrows")
 {
-    <h5 class="fw-semibold mb-3">Quản Lý Mượn Sách</h5>
+    var overdueCount = borrows.Count(b => b.Status == BorrowStatus.Approved && b.DueDate < DateTime.UtcNow);
+    var pendingCount = borrows.Count(b => b.Status == BorrowStatus.Pending);
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-semibold mb-0">Quản Lý Mượn Sách</h5>
+        <div class="d-flex gap-2">
+            @if (overdueCount > 0)
+            {
+                <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle me-1"></i>@overdueCount Quá Hạn</span>
+            }
+            @if (pendingCount > 0)
+            {
+                <span class="badge bg-warning text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i>@pendingCount Chờ Duyệt</span>
+            }
+        </div>
+    </div>
+
+    <!-- Bộ lọc trạng thái -->
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm borrow-filter active" data-filter="all">Tất Cả</button>
+            <button type="button" class="btn btn-outline-warning btn-sm borrow-filter" data-filter="pending">Chờ Duyệt</button>
+            <button type="button" class="btn btn-outline-success btn-sm borrow-filter" data-filter="approved">Đang Mượn</button>
+            <button type="button" class="btn btn-outline-danger btn-sm borrow-filter" data-filter="overdue">Quá Hạn</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm borrow-filter" data-filter="returned">Đã Trả</button>
+            <button type="button" class="btn btn-outline-dark btn-sm borrow-filter" data-filter="rejected">Từ Chối</button>
+        </div>
+    </div>
+
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle" id="borrowsTable">
             <thead class="table-dark">
                 <tr><th>#</th><th>Người Dùng</th><th>Sách</th><th>Ngày Mượn</th><th>Hạn Trả</th><th>Trạng Thái</th><th>Thao Tác</th></tr>
             </thead>
-            <tbody>
+            <tbody id="borrowsTableBody">
                 @{int brRow = 1;}
                 @foreach (var br in borrows)
                 {
-                    <tr>
+                    var isOverdue = br.Status == BorrowStatus.Approved && br.DueDate < DateTime.UtcNow;
+                    var brStatus = isOverdue ? "overdue" : br.Status switch
+                    {
+                        BorrowStatus.Pending => "pending",
+                        BorrowStatus.Approved => "approved",
+                        BorrowStatus.Returned => "returned",
+                        BorrowStatus.Late => "returned",
+                        BorrowStatus.Rejected => "rejected",
+                        _ => "all"
+                    };
+                    var rowClass = isOverdue ? "table-danger" : "";
+                    <tr class="@rowClass" data-status="@brStatus">
                         <td>@(brRow++)</td>
                         <td>@br.User?.FullName<br /><small class="text-muted">@br.User?.Email</small></td>
-                        <td class="fw-semibold">@br.Book?.Title</td>
-                        <td>@br.BorrowDate.ToString("dd MMM yyyy")</td>
-                        <td class="@(br.DueDate < DateTime.UtcNow && br.Status == BorrowStatus.Approved ? "text-danger" : "")">
-                            @br.DueDate.ToString("dd MMM yyyy")
+                        <td>
+                            <span class="fw-semibold">@br.Book?.Title</span>
+                            @if (isOverdue)
+                            {
+                                <br /><small class="text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Quá hạn @((DateTime.UtcNow - br.DueDate).Days) ngày</small>
+                            }
+                        </td>
+                        <td>@br.BorrowDate.ToString("dd/MM/yyyy")</td>
+                        <td class="@(isOverdue ? "text-danger fw-semibold" : "")">
+                            @br.DueDate.ToString("dd/MM/yyyy")
                         </td>
                         <td>
                             @{
-                                var badgeClass = br.Status switch
+                                var badgeClass = isOverdue ? "bg-danger" : br.Status switch
                                 {
                                     BorrowStatus.Pending => "bg-warning text-dark",
                                     BorrowStatus.Approved => "bg-success",
@@ -306,12 +446,12 @@
                                     BorrowStatus.Rejected => "bg-dark",
                                     _ => "bg-light text-dark"
                                 };
-                                var statusLabel = br.Status switch
+                                var statusLabel = isOverdue ? "Quá Hạn" : br.Status switch
                                 {
                                     BorrowStatus.Pending => "Chờ Duyệt",
-                                    BorrowStatus.Approved => "Đã Duyệt",
+                                    BorrowStatus.Approved => "Đang Mượn",
                                     BorrowStatus.Returned => "Đã Trả",
-                                    BorrowStatus.Late => "Quá Hạn",
+                                    BorrowStatus.Late => "Trả Muộn",
                                     BorrowStatus.Rejected => "Từ Chối",
                                     _ => ""
                                 };
@@ -346,19 +486,28 @@
                 }
             </tbody>
         </table>
+        <div id="borrowsEmpty" class="text-center text-muted py-4" style="display:none;">
+            <i class="bi bi-inbox display-5 d-block mb-2"></i>Không có bản ghi nào.
+        </div>
     </div>
 }
 
 <!-- Users Tab -->
 @if (activeTab == "users")
 {
-    <h5 class="fw-semibold mb-3">Quản Lý Người Dùng</h5>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-semibold mb-0">Quản Lý Người Dùng</h5>
+        <div class="col-sm-4">
+            <input type="text" id="userSearch" class="form-control form-control-sm"
+                   placeholder="Tìm tên hoặc email..." autocomplete="off" />
+        </div>
+    </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
+        <table class="table table-hover align-middle" id="usersTable">
             <thead class="table-dark">
                 <tr><th>#</th><th>Họ và Tên</th><th>Email</th><th>Vai Trò</th><th>Ngày Tham Gia</th><th>Thao Tác</th></tr>
             </thead>
-            <tbody>
+            <tbody id="usersTableBody">
                 @{int uRow = 1;}
                 @foreach (var user in users)
                 {
@@ -373,6 +522,10 @@
                         </td>
                         <td>@user.CreatedAt.ToString("dd MMM yyyy")</td>
                         <td>
+                            <a asp-controller="Admin" asp-action="UserBorrowHistory" asp-route-id="@user.Id"
+                               class="btn btn-outline-info btn-sm me-1" title="Xem lịch sử mượn">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
                             @if (user.Role != "Admin")
                             {
                                 <form asp-action="DeleteUser" asp-route-id="@user.Id" method="post" class="d-inline"
@@ -390,10 +543,172 @@
                 }
             </tbody>
         </table>
+        <div id="usersEmpty" class="text-center text-muted py-4" style="display:none;">
+            <i class="bi bi-person-x display-5 d-block mb-2"></i>Không tìm thấy người dùng nào.
+        </div>
     </div>
 }
 
 @section Scripts {
+    @if (activeTab == "borrows")
+    {
+        <script>
+            (function () {
+                var btns = document.querySelectorAll('.borrow-filter');
+                var tbody = document.getElementById('borrowsTableBody');
+                var emptyMsg = document.getElementById('borrowsEmpty');
+
+                btns.forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        btns.forEach(function (b) { b.classList.remove('active'); });
+                        this.classList.add('active');
+                        var filter = this.getAttribute('data-filter');
+                        var rows = tbody.querySelectorAll('tr');
+                        var visible = 0;
+                        rows.forEach(function (row) {
+                            var status = row.getAttribute('data-status');
+                            var show = filter === 'all' || status === filter;
+                            row.style.display = show ? '' : 'none';
+                            if (show) visible++;
+                        });
+                        emptyMsg.style.display = visible === 0 ? '' : 'none';
+                    });
+                });
+            })();
+        </script>
+    }
+    @if (activeTab == "users")
+    {
+        <script>
+            (function () {
+                var input = document.getElementById('userSearch');
+                var tbody = document.getElementById('usersTableBody');
+                var emptyMsg = document.getElementById('usersEmpty');
+                if (!input) return;
+
+                input.addEventListener('input', function () {
+                    var q = this.value.trim().toLowerCase();
+                    var rows = tbody.querySelectorAll('tr');
+                    var visible = 0;
+                    rows.forEach(function (row) {
+                        var text = row.textContent.toLowerCase();
+                        var show = !q || text.includes(q);
+                        row.style.display = show ? '' : 'none';
+                        if (show) visible++;
+                    });
+                    emptyMsg.style.display = visible === 0 ? '' : 'none';
+                });
+            })();
+        </script>
+    }
+    @if (activeTab == "books")
+    {
+        <script>
+            (function () {
+                var input = document.getElementById('authorSearch');
+                var suggestions = document.getElementById('authorSuggestions');
+
+                var authorData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(authorStats));
+                var authorNames = Object.keys(authorData);
+
+                if (!input) return;
+
+                input.addEventListener('input', function () {
+                    var q = this.value.trim().toLowerCase();
+                    suggestions.innerHTML = '';
+
+                    if (!q) { suggestions.style.display = 'none'; return; }
+
+                    var matches = authorNames.filter(function (a) {
+                        return a.toLowerCase().includes(q);
+                    });
+
+                    if (matches.length === 0) { suggestions.style.display = 'none'; return; }
+
+                    matches.forEach(function (author) {
+                        var item = document.createElement('button');
+                        item.type = 'button';
+                        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1 px-2';
+                        item.innerHTML = '<span>' + author + '</span><span class="badge bg-primary rounded-pill">' + authorData[author] + ' cuốn</span>';
+                        item.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            goToAuthor(author);
+                        });
+                        suggestions.appendChild(item);
+                    });
+                    suggestions.style.display = 'block';
+                });
+
+                input.addEventListener('blur', function () {
+                    setTimeout(function () { suggestions.style.display = 'none'; }, 150);
+                });
+
+                input.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        var q = input.value.trim().toLowerCase();
+                        var match = authorNames.find(function (a) { return a.toLowerCase() === q; })
+                                 || authorNames.find(function (a) { return a.toLowerCase().includes(q); });
+                        if (match) goToAuthor(match);
+                        e.preventDefault();
+                    } else if (e.key === 'Escape') {
+                        window.location.href = '@Url.Action("Index", "Admin", new { tab = "books" })';
+                    }
+                });
+
+                function goToAuthor(author) {
+                    window.location.href = '@Url.Action("Index", "Admin", new { tab = "books" })' + '&authorFilter=' + encodeURIComponent(author);
+                }
+
+                // --- Autocomplete danh mục ---
+                var catInput = document.getElementById('categorySearch');
+                var catSuggestions = document.getElementById('categorySuggestions');
+                var categoryData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CategoryStats as Dictionary<string, int> ?? new Dictionary<string, int>()));
+                var categoryNames = Object.keys(categoryData);
+
+                if (catInput) {
+                    catInput.addEventListener('input', function () {
+                        var q = this.value.trim().toLowerCase();
+                        catSuggestions.innerHTML = '';
+                        if (!q) { catSuggestions.style.display = 'none'; return; }
+                        var matches = categoryNames.filter(function (c) { return c.toLowerCase().includes(q); });
+                        if (matches.length === 0) { catSuggestions.style.display = 'none'; return; }
+                        matches.forEach(function (cat) {
+                            var item = document.createElement('button');
+                            item.type = 'button';
+                            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1 px-2';
+                            item.innerHTML = '<span>' + cat + '</span><span class="badge bg-success rounded-pill">' + categoryData[cat] + ' cuốn</span>';
+                            item.addEventListener('mousedown', function (e) {
+                                e.preventDefault();
+                                goToCategory(cat);
+                            });
+                            catSuggestions.appendChild(item);
+                        });
+                        catSuggestions.style.display = 'block';
+                    });
+
+                    catInput.addEventListener('blur', function () {
+                        setTimeout(function () { catSuggestions.style.display = 'none'; }, 150);
+                    });
+
+                    catInput.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            var q = catInput.value.trim().toLowerCase();
+                            var match = categoryNames.find(function (c) { return c.toLowerCase() === q; })
+                                     || categoryNames.find(function (c) { return c.toLowerCase().includes(q); });
+                            if (match) goToCategory(match);
+                            e.preventDefault();
+                        } else if (e.key === 'Escape') {
+                            window.location.href = '@Url.Action("Index", "Admin", new { tab = "books" })';
+                        }
+                    });
+                }
+
+                function goToCategory(cat) {
+                    window.location.href = '@Url.Action("Index", "Admin", new { tab = "books" })' + '&categoryFilter=' + encodeURIComponent(cat);
+                }
+            })();
+        </script>
+    }
     @if (activeTab == "dashboard")
     {
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

@@ -34,7 +34,7 @@ public class BorrowService : IBorrowService
             UserId = userId,
             BookId = bookId,
             BorrowDate = DateTime.UtcNow,
-            DueDate = DateTime.UtcNow.AddDays(14),
+            DueDate = DateTime.UtcNow.AddDays(14), // placeholder, will be reset on approval
             Status = BorrowStatus.Pending
         };
 
@@ -59,6 +59,8 @@ public class BorrowService : IBorrowService
         await _bookRepository.UpdateAsync(book);
 
         record.Status = BorrowStatus.Approved;
+        record.BorrowDate = DateTime.UtcNow;
+        record.DueDate = DateTime.UtcNow.AddDays(14);
         await _borrowRepository.UpdateAsync(record);
 
         return (true, "Yêu cầu mượn sách đã được duyệt.");
@@ -100,6 +102,24 @@ public class BorrowService : IBorrowService
         await _borrowRepository.UpdateAsync(record);
 
         return (true, "Yêu cầu mượn sách đã bị từ chối.");
+    }
+
+    public async Task<(bool Success, string Message)> CancelAsync(int borrowId, int userId)
+    {
+        var record = await _borrowRepository.GetByIdAsync(borrowId);
+        if (record == null)
+            return (false, "Không tìm thấy phiếu mượn.");
+
+        if (record.UserId != userId)
+            return (false, "Bạn không có quyền hủy yêu cầu này.");
+
+        if (record.Status != BorrowStatus.Pending)
+            return (false, "Chỉ có thể hủy yêu cầu ở trạng thái chờ duyệt.");
+
+        record.Status = BorrowStatus.Rejected;
+        await _borrowRepository.UpdateAsync(record);
+
+        return (true, "Yêu cầu mượn sách đã được hủy.");
     }
 
     public async Task<IEnumerable<BorrowRecord>> GetAllAsync()

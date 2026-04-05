@@ -35,11 +35,17 @@ else
                 @{int row = 1;}
                 @foreach (var record in Model)
                 {
-                    <tr>
+                    var isOverdue = record.Status == BorrowStatus.Approved && record.DueDate < DateTime.UtcNow;
+                    var overdueDays = isOverdue ? (int)(DateTime.UtcNow - record.DueDate).TotalDays : 0;
+                    <tr class="@(isOverdue ? "table-danger" : "")">
                         <td>@(row++)</td>
                         <td>
                             <div class="fw-semibold">@record.Book?.Title</div>
                             <small class="text-muted">@record.Book?.Author</small>
+                            @if (isOverdue)
+                            {
+                                <br /><small class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i>Quá hạn @overdueDays ngày</small>
+                            }
                         </td>
                         <td>@record.BorrowDate.ToString("dd MMM yyyy")</td>
                         <td class="@(record.DueDate < DateTime.UtcNow && record.Status == BorrowStatus.Approved ? "text-danger fw-bold" : "")">
@@ -51,9 +57,11 @@ else
                                 var (badgeClass, icon, label) = record.Status switch
                                 {
                                     BorrowStatus.Pending => ("bg-warning text-dark", "bi-hourglass", "Chờ Duyệt"),
-                                    BorrowStatus.Approved => ("bg-success", "bi-check-circle", "Đã Duyệt"),
+                                    BorrowStatus.Approved => isOverdue
+                                        ? ("bg-danger", "bi-exclamation-circle", "Đang Quá Hạn")
+                                        : ("bg-success", "bi-check-circle", "Đã Duyệt"),
                                     BorrowStatus.Returned => ("bg-secondary", "bi-book", "Đã Trả"),
-                                    BorrowStatus.Late => ("bg-danger", "bi-exclamation-circle", "Quá Hạn"),
+                                    BorrowStatus.Late => ("bg-danger", "bi-exclamation-circle", "Trả Muộn"),
                                     BorrowStatus.Rejected => ("bg-dark", "bi-x-circle", "Từ Chối"),
                                     _ => ("bg-light text-dark", "bi-question", "Khác")
                                 };
@@ -70,6 +78,16 @@ else
                                     @Html.AntiForgeryToken()
                                     <button class="btn btn-outline-secondary btn-sm">
                                         <i class="bi bi-book me-1"></i>Trả Sách
+                                    </button>
+                                </form>
+                            }
+                            @if (record.Status == BorrowStatus.Pending)
+                            {
+                                <form asp-controller="Borrow" asp-action="Cancel" asp-route-id="@record.Id"
+                                      method="post" onsubmit="return confirm('Bạn có chắc muốn hủy yêu cầu này?');">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-outline-danger btn-sm">
+                                        <i class="bi bi-x-circle me-1"></i>Hủy Yêu Cầu
                                     </button>
                                 </form>
                             }
