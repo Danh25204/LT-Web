@@ -57,7 +57,7 @@ public class BookService : IBookService
         book.Description = model.Description;
         book.CategoryId = model.CategoryId;
         book.Quantity = model.Quantity;
-        book.AvailableQuantity = Math.Max(0, book.AvailableQuantity + quantityDiff);
+        book.AvailableQuantity = Math.Min(model.Quantity, Math.Max(0, book.AvailableQuantity + quantityDiff));
 
         if (coverImage != null && coverImage.Length > 0)
         {

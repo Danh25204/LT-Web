@@ -36,4 +36,5 @@ public class Book
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<BorrowRecord> BorrowRecords { get; set; } = new List<BorrowRecord>();
+    public ICollection<BookReview> Reviews { get; set; } = new List<BookReview>();
 }

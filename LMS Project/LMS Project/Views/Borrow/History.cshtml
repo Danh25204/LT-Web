@@ -80,6 +80,23 @@ else
                                         <i class="bi bi-book me-1"></i>Trả Sách
                                     </button>
                                 </form>
+                                @if (!isOverdue && record.ExtendCount < 1)
+                                {
+                                    <form asp-controller="Borrow" asp-action="Extend" asp-route-id="@record.Id"
+                                          method="post" class="d-inline ms-1"
+                                          onsubmit="return confirm('Gia hạn thêm 7 ngày?');">
+                                        @Html.AntiForgeryToken()
+                                        <button class="btn btn-outline-primary btn-sm">
+                                            <i class="bi bi-calendar-plus me-1"></i>Gia Hạn
+                                        </button>
+                                    </form>
+                                }
+                                @if (record.ExtendCount >= 1)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="Đã gia hạn 1 lần">
+                                        <i class="bi bi-check me-1"></i>Đã gia hạn
+                                    </span>
+                                }
                             }
                             @if (record.Status == BorrowStatus.Pending)
                             {

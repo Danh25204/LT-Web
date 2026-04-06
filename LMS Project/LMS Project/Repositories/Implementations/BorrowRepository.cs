@@ -39,6 +39,11 @@ public class BorrowRepository : IBorrowRepository
             .CountAsync(br => br.UserId == userId
                 && (br.Status == BorrowStatus.Pending || br.Status == BorrowStatus.Approved));
 
+    public async Task<bool> HasActiveBorrowAsync(int userId, int bookId)
+        => await _context.BorrowRecords
+            .AnyAsync(br => br.UserId == userId && br.BookId == bookId
+                && (br.Status == BorrowStatus.Pending || br.Status == BorrowStatus.Approved));
+
     public async Task AddAsync(BorrowRecord record)
     {
         await _context.BorrowRecords.AddAsync(record);

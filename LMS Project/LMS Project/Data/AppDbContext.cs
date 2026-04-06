@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Book> Books { get; set; }
     public DbSet<Category> Categories { get; set; }
     public DbSet<BorrowRecord> BorrowRecords { get; set; }
+    public DbSet<BookReview> BookReviews { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,22 @@ public class AppDbContext : DbContext
             .WithMany(b => b.BorrowRecords)
             .HasForeignKey(br => br.BookId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<BookReview>()
+            .HasOne(r => r.Book)
+            .WithMany(b => b.Reviews)
+            .HasForeignKey(r => r.BookId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<BookReview>()
+            .HasOne(r => r.User)
+            .WithMany()
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<BookReview>()
+            .HasIndex(r => new { r.BookId, r.UserId })
+            .IsUnique(); // mỗi user chỉ review 1 lần / cuốn
 
         // Seed default admin user
         modelBuilder.Entity<User>().HasData(new User

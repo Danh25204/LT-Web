@@ -27,7 +27,13 @@
                         </div>
                         <div class="col-md-6">
                             <label asp-for="ISBN" class="form-label fw-semibold"></label>
-                            <input asp-for="ISBN" class="form-control" placeholder="Không bắt buộc" />
+                            <div class="input-group">
+                                <input asp-for="ISBN" class="form-control" placeholder="Không bắt buộc" id="isbnInput" />
+                                <button type="button" class="btn btn-outline-secondary" id="lookupIsbnBtn" title="Tra cứu thông tin sách từ ISBN">
+                                    <i class="bi bi-search me-1"></i>Tra cứu
+                                </button>
+                            </div>
+                            <div class="form-text">Nhập ISBN rồi nhấn "Tra cứu" để tự động điền thông tin.</div>
                             <span asp-validation-for="ISBN" class="text-danger small"></span>
                         </div>
                         <div class="col-md-6">
@@ -71,4 +77,43 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        document.getElementById('lookupIsbnBtn').addEventListener('click', async function () {
+            const isbn = document.getElementById('isbnInput').value.trim().replace(/[-\s]/g, '');
+            if (!isbn) { alert('Vui lòng nhập ISBN trước.'); return; }
+
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tra cứu...';
+
+            try {
+                // Open Library API - miễn phí, không cần key
+                const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+                const data = await res.json();
+                const key = `ISBN:${isbn}`;
+
+                if (!data[key]) {
+                    alert('Không tìm thấy sách với ISBN này. Vui lòng kiểm tra lại.');
+                    return;
+                }
+
+                const info = data[key];
+                const titleEl = document.getElementById('Title');
+                const authorEl = document.getElementById('Author');
+                const descEl = document.getElementById('Description');
+
+                if (info.title && titleEl) titleEl.value = info.title;
+                if (info.authors && info.authors.length > 0 && authorEl)
+                    authorEl.value = info.authors.map(a => a.name).join(', ');
+                if (info.description && descEl)
+                    descEl.value = typeof info.description === 'string' ? info.description : info.description.value || '';
+
+            } catch (e) {
+                alert('Lỗi kết nối. Vui lòng thử lại sau.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search me-1"></i>Tra cứu';
+            }
+        });
+    </script>
 }

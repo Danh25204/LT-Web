@@ -36,6 +36,8 @@ public class BorrowRecord
 
     public BorrowStatus Status { get; set; } = BorrowStatus.Pending;
 
+    public int ExtendCount { get; set; } = 0;
+
     [MaxLength(500)]
     public string? Notes { get; set; }
 }

@@ -22,6 +22,9 @@ public class BorrowService : IBorrowService
         if (activeCount >= MaxActiveBorrows)
             return (false, string.Format("Bạn không thể mượn quá {0} cuốn sách cùng lúc.", MaxActiveBorrows));
 
+        if (await _borrowRepository.HasActiveBorrowAsync(userId, bookId))
+            return (false, "Bạn đã có yêu cầu mượn hoặc đang mượn cuốn sách này rồi.");
+
         var book = await _bookRepository.GetByIdAsync(bookId);
         if (book == null)
             return (false, "Không tìm thấy sách.");
@@ -120,6 +123,31 @@ public class BorrowService : IBorrowService
         await _borrowRepository.UpdateAsync(record);
 
         return (true, "Yêu cầu mượn sách đã được hủy.");
+    }
+
+    public async Task<(bool Success, string Message)> ExtendAsync(int borrowId, int userId)
+    {
+        var record = await _borrowRepository.GetByIdAsync(borrowId);
+        if (record == null)
+            return (false, "Không tìm thấy phiếu mượn.");
+
+        if (record.UserId != userId)
+            return (false, "Bạn không có quyền gia hạn yêu cầu này.");
+
+        if (record.Status != BorrowStatus.Approved)
+            return (false, "Chỉ có thể gia hạn sách đang mượn.");
+
+        if (record.DueDate < DateTime.UtcNow)
+            return (false, "Sách đã quá hạn, không thể gia hạn. Vui lòng trả sách ngay.");
+
+        if (record.ExtendCount >= 1)
+            return (false, "Mỗi lượt mượn chỉ được gia hạn 1 lần.");
+
+        record.DueDate = record.DueDate.AddDays(7);
+        record.ExtendCount++;
+        await _borrowRepository.UpdateAsync(record);
+
+        return (true, "Gia hạn thành công! Hạn trả mới: " + record.DueDate.ToString("dd/MM/yyyy") + ".");
     }
 
     public async Task<IEnumerable<BorrowRecord>> GetAllAsync()

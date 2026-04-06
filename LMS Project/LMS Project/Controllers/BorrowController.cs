@@ -113,6 +113,19 @@ public class BorrowController : Controller
         return RedirectToAction("History");
     }
 
+    [HttpPost]
+    [Authorize(Roles = "User")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Extend(int id)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Challenge();
+
+        var (success, message) = await _borrowService.ExtendAsync(id, userId.Value);
+        TempData[success ? "Success" : "Error"] = message;
+        return RedirectToAction("History");
+    }
+
     private int? GetCurrentUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier);

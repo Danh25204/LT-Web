@@ -1,6 +1,7 @@
 @model IEnumerable<LMS_Project.Models.Book>
 @{
     ViewData["Title"] = "Trang Chủ";
+    var ratings = ViewBag.Ratings as Dictionary<int, double> ?? new Dictionary<int, double>();
 }
 
 <div class="hero-section bg-primary text-white rounded-3 p-5 mb-4">
@@ -51,6 +52,19 @@
                 <div class="card-body">
                     <span class="badge bg-info text-dark mb-1">@book.Category?.Name</span>
                     <h6 class="card-title fw-bold">@book.Title</h6>
+                    @{
+                        var bookRating = ratings.ContainsKey(book.Id) ? ratings[book.Id] : 0;
+                    }
+                    @if (bookRating > 0)
+                    {
+                        <div class="mb-1">
+                            @for (int s = 1; s <= 5; s++)
+                            {
+                                <i class="bi @(s <= Math.Round(bookRating) ? "bi-star-fill text-warning" : "bi-star text-muted")" style="font-size:0.75rem;"></i>
+                            }
+                            <span class="text-muted" style="font-size:0.75rem;">@bookRating.ToString("0.0")</span>
+                        </div>
+                    }
                     <p class="card-text text-muted small">
                         <i class="bi bi-person me-1"></i>@book.Author
                     </p>

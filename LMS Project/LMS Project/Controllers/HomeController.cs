@@ -8,10 +8,12 @@ namespace LMS_Project.Controllers;
 public class HomeController : Controller
 {
     private readonly IBookService _bookService;
+    private readonly IBookReviewService _reviewService;
 
-    public HomeController(IBookService bookService)
+    public HomeController(IBookService bookService, IBookReviewService reviewService)
     {
         _bookService = bookService;
+        _reviewService = reviewService;
     }
 
     private const int PageSize = 6;
@@ -26,12 +28,18 @@ public class HomeController : Controller
         var totalPages = (int)Math.Ceiling(totalCount / (double)PageSize);
         page = Math.Max(1, Math.Min(page, Math.Max(1, totalPages)));
 
-        var paged = books.Skip((page - 1) * PageSize).Take(PageSize);
+        var paged = books.Skip((page - 1) * PageSize).Take(PageSize).ToList();
+
+        // Load ratings sequentially to avoid DbContext concurrency issues
+        var ratings = new Dictionary<int, double>();
+        foreach (var b in paged)
+            ratings[b.Id] = await _reviewService.GetAverageRatingAsync(b.Id);
 
         ViewBag.Search = search;
         ViewBag.CurrentPage = page;
         ViewBag.TotalPages = totalPages;
         ViewBag.TotalCount = totalCount;
+        ViewBag.Ratings = ratings;
         return View(paged);
     }
 

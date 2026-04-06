@@ -3,6 +3,7 @@ using LMS_Project.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Security.Claims;
 
 namespace LMS_Project.Controllers;
 
@@ -12,12 +13,14 @@ public class BookController : Controller
     private readonly IBookService _bookService;
     private readonly ICategoryService _categoryService;
     private readonly IWebHostEnvironment _env;
+    private readonly IBookReviewService _reviewService;
 
-    public BookController(IBookService bookService, ICategoryService categoryService, IWebHostEnvironment env)
+    public BookController(IBookService bookService, ICategoryService categoryService, IWebHostEnvironment env, IBookReviewService reviewService)
     {
         _bookService = bookService;
         _categoryService = categoryService;
         _env = env;
+        _reviewService = reviewService;
     }
 
     public async Task<IActionResult> Index()
@@ -30,6 +33,18 @@ public class BookController : Controller
     {
         var book = await _bookService.GetBookByIdAsync(id);
         if (book == null) return NotFound();
+
+        var reviews = await _reviewService.GetReviewsByBookAsync(id);
+        var avgRating = await _reviewService.GetAverageRatingAsync(id);
+        ViewBag.Reviews = reviews;
+        ViewBag.AvgRating = avgRating;
+
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdStr, out var uid) && !User.IsInRole("Admin"))
+        {
+            ViewBag.CanReview = await _reviewService.CanUserReviewAsync(uid, id);
+            ViewBag.UserReview = await _reviewService.GetUserReviewAsync(uid, id);
+        }
         return View(book);
     }
 
@@ -126,5 +141,16 @@ public class BookController : Controller
     {
         var categories = await _categoryService.GetAllCategoriesAsync();
         ViewBag.Categories = new SelectList(categories, "Id", "Name", selectedId);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "User")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddReview(int bookId, int rating, string? comment)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var (success, message) = await _reviewService.AddReviewAsync(userId, bookId, rating, comment);
+        TempData[success ? "Success" : "Error"] = message;
+        return RedirectToAction("Details", new { id = bookId });
     }
 }
